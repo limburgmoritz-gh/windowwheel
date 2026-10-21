@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+.DS_Store
+# persönliche Daten – liegen inzwischen in ~/Library/Application Support/WindowWheel
+config.json
+.windowwheel-state.json
+.windowwheel.lock
