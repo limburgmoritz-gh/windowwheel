@@ -31,8 +31,8 @@ TILE_GAP = 40.0      # Abstand zwischen den Kacheln
 MAX_TILE_W = 560.0   # damit wenige Fenster nicht riesig werden
 TYPICAL_ASPECT = 1.6
 ICON = 18.0
-HINT = ("Klick  Fenster setzen     Ziehen  Abstand (2× klicken: zurücksetzen)     ␣  überspringen     "
-        "⌫  zurück     ⏎  fertig     esc  abbrechen")
+HINT = ("Click  place window     Drag  spacing (double-click: reset)     ␣  skip     "
+        "⌫  undo     ⏎  done     esc  cancel")
 MIN_SLOT_W, MIN_SLOT_H = 280, 200  # so klein dürfen Fenster beim Abstand-Ziehen höchstens werden
 DRAG_THRESHOLD = 3.0
 
@@ -67,7 +67,7 @@ class Tile:
         text = Q.CATextLayer.layer()
         label = window.title or window.app_name
         if window.minimized:
-            label += " · minimiert"
+            label += " · minimized"
         text.setString_(label)
         text.setFont_(NSFont.systemFontOfSize_weight_(13, d.MEDIUM))
         text.setFontSize_(13)
@@ -464,10 +464,10 @@ class AssignMode:
             return
         card, screen, rects = self._map(view)
         top = card.origin.y + card.size.height
-        d.text(f"Fenster {self.active + 1} von {len(self.slots)}", NSMakeRect(card.origin.x, top - 26 - 30, card.size.width, 30),
+        d.text(f"Window {self.active + 1} of {len(self.slots)}", NSMakeRect(card.origin.x, top - 26 - 30, card.size.width, 30),
                size=20, weight=d.BOLD, align="center")
         gx, gy = self.gap
-        info = f"{self.layout.name}   ·   Abstand  ↔ {gx:.0f} px   ↕ {gy:.0f} px"
+        info = f"{self.layout.name}   ·   Spacing  ↔ {gx:.0f} px   ↕ {gy:.0f} px"
         d.text(info, NSMakeRect(card.origin.x, screen.origin.y - 12 - 18, card.size.width, 18), size=12.5,
                weight=d.SEMIBOLD if self._dragging() else d.REGULAR,
                color=d.white(0.95 if self._dragging() else 0.6), align="center")
@@ -488,7 +488,7 @@ class AssignMode:
         d.text(HINT, self._pill(view), size=12.5, color=d.white(0.9), align="center")
         if not self.candidates():
             b = view.bounds()
-            d.text("Keine weiteren Fenster – ⏎ zum Beenden", NSMakeRect(0, b.size.height / 2 - 60, b.size.width, 30),
+            d.text("No more windows – press ⏎ to finish", NSMakeRect(0, b.size.height / 2 - 60, b.size.width, 30),
                    size=16, color=d.white(0.7), align="center")
 
     # --- Eingabe ------------------------------------------------------------
@@ -537,7 +537,7 @@ class AssignMode:
         drag, self._drag = self._drag, None
         if drag is None or self.closing:
             return
-        log.debug("Ziehen von (%.0f, %.0f) nach (%.0f, %.0f) -> Abstand %s",
+        log.debug("Dragged from (%.0f, %.0f) to (%.0f, %.0f) -> spacing %s",
                   drag["start"].x, drag["start"].y, point.x, point.y, self.gap)
         if drag["moved"]:
             self._apply_gap()

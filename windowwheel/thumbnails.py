@@ -32,8 +32,8 @@ class ThumbnailLoader:
             if not self._warned:
                 self._warned = True
                 log.warning(
-                    "Keine Bildschirmaufnahme-Berechtigung – Vorschaubilder zeigen nur App-Icons. "
-                    "Freigabe unter Systemeinstellungen › Datenschutz & Sicherheit › Bildschirmaufnahme."
+                    "No screen recording permission – previews show app icons only. Grant it under "
+                    "System Settings › Privacy & Security › Screen & System Audio Recording."
                 )
                 Q.CGRequestScreenCaptureAccess()
             return

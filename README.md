@@ -92,7 +92,11 @@ to snap the window into it; press `⌥ Tab` or `Esc` again to drop it normally.
 
 ## Configuration
 
-Use **“Save current arrangement as layout…”** in the menu bar to turn your current window
+Open **Settings…** from the menu bar icon to change the keyboard shortcut (click the field and
+press the new combination), the default spacing and the window behavior. Changes apply
+immediately.
+
+Use **“Save Current Arrangement as Layout…”** in the menu bar to turn your current window
 arrangement into a layout. Edges snap to clean fractions (½, ⅓, ¼, …).
 
 All settings live in `~/Library/Application Support/WindowWheel/config.json`
@@ -119,7 +123,6 @@ rm -rf ~/Applications/WindowWheel.app ~/Library/Application\ Support/WindowWheel
 
 ## Known limitations
 
-- The user interface is currently in German.
 - After Homebrew updates Python, macOS may revoke the permissions for “Python”. Remove the entry
   in System Settings, grant it again and run `brew services restart windowwheel`.
 - Windows on other Spaces or in full-screen mode cannot be arranged.

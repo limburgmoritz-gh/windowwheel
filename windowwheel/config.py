@@ -23,14 +23,14 @@ DEFAULT_CONFIG = {
     "center_cursor": True,
     "hide_others": True,
     "layouts": [
-        {"name": "50 / 50", "slots": [[0, 0, 0.5, 1], [0.5, 0, 0.5, 1]]},
-        {"name": "Drittel", "slots": [[0, 0, 0.3333, 1], [0.3333, 0, 0.3334, 1], [0.6667, 0, 0.3333, 1]]},
-        {"name": "Fokus Mitte", "slots": [[0.25, 0, 0.5, 1], [0, 0, 0.25, 1], [0.75, 0, 0.25, 1]]},
-        {"name": "Haupt + 2", "slots": [[0, 0, 0.6, 1], [0.6, 0, 0.4, 0.5], [0.6, 0.5, 0.4, 0.5]]},
-        {"name": "Viertel", "slots": [[0, 0, 0.25, 1], [0.25, 0, 0.25, 1], [0.5, 0, 0.25, 1], [0.75, 0, 0.25, 1]]},
-        {"name": "Raster 2×2", "slots": [[0, 0, 0.5, 0.5], [0.5, 0, 0.5, 0.5], [0, 0.5, 0.5, 0.5], [0.5, 0.5, 0.5, 0.5]]},
-        {"name": "Mitte + 4", "slots": [[0.25, 0, 0.5, 1], [0, 0, 0.25, 0.5], [0, 0.5, 0.25, 0.5], [0.75, 0, 0.25, 0.5], [0.75, 0.5, 0.25, 0.5]]},
-        {"name": "2/3 + 1/3", "slots": [[0, 0, 0.6667, 1], [0.6667, 0, 0.3333, 1]]},
+        {"name": "Halves", "slots": [[0, 0, 0.5, 1], [0.5, 0, 0.5, 1]]},
+        {"name": "Thirds", "slots": [[0, 0, 0.3333, 1], [0.3333, 0, 0.3334, 1], [0.6667, 0, 0.3333, 1]]},
+        {"name": "Center Focus", "slots": [[0.25, 0, 0.5, 1], [0, 0, 0.25, 1], [0.75, 0, 0.25, 1]]},
+        {"name": "Main + 2", "slots": [[0, 0, 0.6, 1], [0.6, 0, 0.4, 0.5], [0.6, 0.5, 0.4, 0.5]]},
+        {"name": "Quarters", "slots": [[0, 0, 0.25, 1], [0.25, 0, 0.25, 1], [0.5, 0, 0.25, 1], [0.75, 0, 0.25, 1]]},
+        {"name": "Grid 2×2", "slots": [[0, 0, 0.5, 0.5], [0.5, 0, 0.5, 0.5], [0, 0.5, 0.5, 0.5], [0.5, 0.5, 0.5, 0.5]]},
+        {"name": "Center + 4", "slots": [[0.25, 0, 0.5, 1], [0, 0, 0.25, 0.5], [0, 0.5, 0.25, 0.5], [0.75, 0, 0.25, 0.5], [0.75, 0.5, 0.25, 0.5]]},
+        {"name": "Two Thirds", "slots": [[0, 0, 0.6667, 1], [0.6667, 0, 0.3333, 1]]},
     ],
 }
 
@@ -67,11 +67,11 @@ def _parse_layouts(raw_layouts):
         slots = []
         for slot in entry.get("slots", []):
             if len(slot) != 4 or not all(isinstance(v, (int, float)) for v in slot):
-                log.warning("Layout %r: ungültiger Slot %r wird ignoriert", name, slot)
+                log.warning("Layout %r: ignoring invalid slot %r", name, slot)
                 continue
             x, y, w, h = (float(v) for v in slot)
             if w <= 0 or h <= 0 or x < 0 or y < 0 or x + w > 1.001 or y + h > 1.001:
-                log.warning("Layout %r: Slot %r liegt außerhalb von 0..1", name, slot)
+                log.warning("Layout %r: slot %r is outside 0..1", name, slot)
                 continue
             slots.append((x, y, w, h))
         if slots:
@@ -83,11 +83,11 @@ def load_config():
     CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
     if not CONFIG_PATH.exists():
         save_raw(DEFAULT_CONFIG)
-        log.info("Standard-Konfiguration angelegt: %s", CONFIG_PATH)
+        log.info("Created default configuration: %s", CONFIG_PATH)
     try:
         raw = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
-        log.error("config.json nicht lesbar (%s) – nutze Standardwerte", exc)
+        log.error("config.json is unreadable (%s) – using defaults", exc)
         raw = DEFAULT_CONFIG
     layouts = _parse_layouts(raw.get("layouts", [])) if raw is not DEFAULT_CONFIG else []
     if not layouts:  # Standard-Layouts ohne Index: werden nie in eine kaputte Datei geschrieben
@@ -133,7 +133,7 @@ def save_state(state):
     try:
         STATE_PATH.write_text(json.dumps(state, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     except OSError as exc:
-        log.warning("Zustand nicht speicherbar: %s", exc)
+        log.warning("Could not save state: %s", exc)
 
 
 def save_layout_gap(raw, layout, rel_gap):

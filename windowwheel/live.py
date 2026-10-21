@@ -92,7 +92,7 @@ class LiveThumbnails:
             sink, SCK.SCStreamOutputTypeScreen, self.queue, None
         )
         if not ok:
-            log.warning("Live-Vorschau für Fenster %s nicht möglich: %s", wid, error)
+            log.warning("Live preview unavailable for window %s: %s", wid, error)
             return
         self.streams[wid] = (stream, sink)
 

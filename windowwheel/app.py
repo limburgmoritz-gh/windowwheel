@@ -29,7 +29,8 @@ from . import __version__, appbundle, autostart, ax
 from . import config as cfg
 from .assign import AssignMode
 from .geometry import cocoa_to_cg_rect, gap_to_relative, intersection_area, screen_center_cg, screen_under_mouse
-from .hotkey import HotkeyTap
+from .hotkey import HotkeyTap, format_hotkey
+from .settings import SettingsWindow
 from .overlay import Overlay
 from .snap import SnapMode
 from .thumbnails import ThumbnailLoader
@@ -48,6 +49,7 @@ class Controller:
         self.saved_cursor = None
         self.prefetch = None
         self.state = cfg.load_state()
+        self.on_settings_changed = None
         self.tap = HotkeyTap(self.config.hotkey, self.on_hotkey, self.on_release, self.on_key, self.on_mouse)
 
     # --- Start / Konfiguration --------------------------------------------
@@ -57,13 +59,12 @@ class Controller:
         if not ax.is_trusted(prompt=attempt == 0) or not self.tap.start():
             if attempt == 0:
                 log.warning(
-                    "Kein Bedienungshilfen-Zugriff. Bitte unter Systemeinstellungen › Datenschutz & "
-                    "Sicherheit › Bedienungshilfen „Python“ (bzw. Terminal/VS Code) erlauben. "
-                    "Ich warte, bis der Zugriff da ist …"
+                    "No Accessibility permission. Please allow \"Python\" (or your terminal) under "
+                    "System Settings › Privacy & Security › Accessibility. Waiting for permission …"
                 )
             AppHelper.callLater(3.0, self.start, attempt + 1)
             return
-        log.info("Bereit. Hotkey: %s  ·  Konfiguration: %s", self.config.hotkey, cfg.CONFIG_PATH)
+        log.info("Ready. Shortcut: %s  ·  Config: %s", self.config.hotkey, cfg.CONFIG_PATH)
         AppHelper.callLater(0.5, self._warm_up)
 
     def _warm_up(self):
@@ -77,15 +78,28 @@ class Controller:
             new = cfg.load_config()
             self.tap.set_hotkey(new.hotkey)
         except ValueError as exc:
-            log.error("Konfiguration fehlerhaft: %s", exc)
+            log.error("Invalid configuration: %s", exc)
             return
         self.config = new
-        log.info("Konfiguration geladen (%d Layouts)", len(new.layouts))
+        log.info("Configuration loaded (%d layouts)", len(new.layouts))
+
+    def update_settings(self, **values):
+        """Einstellungen aus dem Einstellungsfenster speichern und sofort übernehmen."""
+        raw = self.config.raw
+        raw.update(values)
+        cfg.save_raw(raw)
+        self.reload_config(force=True)
+        if self.on_settings_changed is not None:
+            self.on_settings_changed()
+
+    @property
+    def hotkey_label(self):
+        return format_hotkey(self.config.hotkey)
 
     # --- Hotkey-Callbacks (laufen im Event-Tap, daher Arbeit verschieben) ---
 
     def on_hotkey(self):
-        log.debug("Hotkey gedrückt")
+        log.debug("Shortcut pressed")
         AppHelper.callAfter(self._hotkey_pressed)
 
     def on_release(self):
@@ -137,7 +151,7 @@ class Controller:
         self.holding = True
         self.saved_cursor = Q.CGEventGetLocation(Q.CGEventCreate(None))
         self.overlay.show(screen, self.mode)
-        log.info("Rad geöffnet auf %s", screen.localizedName())
+        log.info("Wheel opened on %s", screen.localizedName())
         if self.config.center_cursor:
             Q.CGWarpMouseCursorPosition(screen_center_cg(screen))
             Q.CGAssociateMouseAndMouseCursorPosition(True)
@@ -160,7 +174,7 @@ class Controller:
         layout = self.config.layouts[idx]
         wheel = self.mode
         self.holding = False
-        log.info("Layout gewählt: %s", layout.name)
+        log.info("Layout selected: %s", layout.name)
         self._remember_layout(wheel.screen, layout)
         windows, loader = None, None
         if self.prefetch is not None and self.prefetch[0] is wheel:
@@ -192,7 +206,7 @@ class Controller:
         mode.exit(cancelled=False, hide_others=self.config.hide_others)
         rel_gap = gap_to_relative(mode.gap, mode.screen)
         if mode.gap_changed and cfg.save_layout_gap(self.config.raw, mode.layout, rel_gap):
-            log.info("Abstand für %r gespeichert: %s px (relativ %s)", mode.layout.name, mode.gap, rel_gap)
+            log.info("Spacing for %r saved: %s px (relative %s)", mode.layout.name, mode.gap, rel_gap)
             self.reload_config(force=True)
         placed = [w for w in mode.assigned if w is not None]
         # Gesetzte Fenster (noch unter dem Overlay) nach vorne holen; Slot 1 bekommt zuletzt den Fokus.
@@ -243,7 +257,7 @@ class Controller:
         # ⌥ ab jetzt vor macOS verstecken, sonst kachelt die eingebaute ⌥-Kachelung mit.
         self.tap.hide_mods = Q.kCGEventFlagMaskAlternate
         self.tap.release_hidden_mods()
-        log.info("Einrasten: %s – Layout %s auf %s", window.app_name, layout.name, screen.localizedName())
+        log.info("Snapping: %s – layout %s on %s", window.app_name, layout.name, screen.localizedName())
         return True
 
     def snap_screen_changed(self, mode, point):
@@ -269,10 +283,10 @@ class Controller:
             ax.set_frame(window, rect)
             ax.focus(window)
             expected = ax.get_frame(window.element)
-            log.info("Eingerastet: %s -> %s", window.app_name, rect)
+            log.info("Snapped: %s -> %s", window.app_name, rect)
         elif ax.get_frame(window.element) != expected:
             # Sicherheitsnetz: macOS (z.B. die eingebaute Kachelung) hat danach noch umgesetzt.
-            log.info("Fenster wurde nachträglich verschoben – rücke es wieder ins Feld")
+            log.info("Window was moved afterwards – snapping it back")
             ax.set_frame(window, rect)
         if attempt < 2:
             AppHelper.callLater(0.4, self._snap_window, window, rect, expected, attempt + 1)
@@ -301,7 +315,7 @@ class Controller:
             if len(picked) == 9:
                 break
         if not picked:
-            self._alert("Keine Fenster gefunden", "Auf diesem Bildschirm sind keine passenden Fenster sichtbar.")
+            self._alert("No windows found", "There are no suitable windows visible on this screen.")
             return
 
         slots = []
@@ -321,16 +335,16 @@ class Controller:
         raw["layouts"] = list(raw.get("layouts", [])) + [{"name": name, "slots": slots}]
         cfg.save_raw(raw)
         self.reload_config(force=True)
-        log.info("Layout %r mit %d Slots gespeichert", name, len(slots))
+        log.info("Layout %r with %d slots saved", name, len(slots))
 
     def _ask_name(self, count):
         alert = NSAlert.alloc().init()
-        alert.setMessageText_("Anordnung als Layout speichern")
-        alert.setInformativeText_(f"{count} Fenster erkannt. Wie soll das Layout heißen?")
-        alert.addButtonWithTitle_("Speichern")
-        alert.addButtonWithTitle_("Abbrechen")
+        alert.setMessageText_("Save Arrangement as Layout")
+        alert.setInformativeText_(f"{count} windows detected. What should the layout be called?")
+        alert.addButtonWithTitle_("Save")
+        alert.addButtonWithTitle_("Cancel")
         field = NSTextField.alloc().initWithFrame_(NSMakeRect(0, 0, 260, 24))
-        field.setStringValue_(f"Eigenes Layout {len(self.config.layouts) + 1}")
+        field.setStringValue_(f"Custom Layout {len(self.config.layouts) + 1}")
         alert.setAccessoryView_(field)
         alert.window().setInitialFirstResponder_(field)
         NSApp.activateIgnoringOtherApps_(True)
@@ -371,21 +385,21 @@ class AppDelegate(NSObject):
             button.setTitle_("◎")
 
         menu = NSMenu.alloc().init()
-        hotkey = self.controller.config.hotkey
         # Bei Homebrew kümmert sich `brew services` um den Autostart.
-        autostart_item = (("Autostart: brew services start windowwheel", None) if autostart.installed_with_homebrew()
-                          else ("Beim Anmelden starten", "toggleAutostart:"))
+        autostart_item = (("Launch at login: via brew services", None) if autostart.installed_with_homebrew()
+                          else ("Launch at Login", "toggleAutostart:"))
         for title, action in (
             (f"WindowWheel {__version__}", None),
             (None, None),
-            (f"Rad öffnen  ({hotkey})", "openWheel:"),
-            ("Aktuelle Anordnung als Layout speichern …", "saveArrangement:"),
+            (self._open_title(), "openWheel:"),
+            ("Save Current Arrangement as Layout…", "saveArrangement:"),
             (None, None),
-            ("Layouts bearbeiten (config.json)", "editConfig:"),
-            ("Konfiguration neu laden", "reloadConfig:"),
+            ("Settings…", "openSettings:"),
+            ("Edit Layouts (config.json)", "editConfig:"),
+            ("Reload Configuration", "reloadConfig:"),
             (None, None),
             autostart_item,
-            ("WindowWheel beenden", "quit:"),
+            ("Quit WindowWheel", "quit:"),
         ):
             if title is None:
                 menu.addItem_(NSMenuItem.separatorItem())
@@ -395,8 +409,25 @@ class AppDelegate(NSObject):
             item.setEnabled_(action is not None)
             if action == "toggleAutostart:":
                 item.setState_(1 if autostart.is_enabled() else 0)
+            if action == "openWheel:":
+                self.open_item = item
             menu.addItem_(item)
         self.status_item.setMenu_(menu)
+        self.controller.on_settings_changed = self._settings_changed
+
+    @objc.python_method
+    def _open_title(self):
+        return f"Open Wheel  ({self.controller.hotkey_label})"
+
+    @objc.python_method
+    def _settings_changed(self):
+        self.open_item.setTitle_(self._open_title())
+
+    @objc.IBAction
+    def openSettings_(self, sender):
+        if getattr(self, "settings", None) is None:
+            self.settings = SettingsWindow.alloc().initWithController_(self.controller)
+        self.settings.show()
 
     @objc.IBAction
     def openWheel_(self, sender):
@@ -437,7 +468,7 @@ class AppDelegate(NSObject):
 def main():
     logging.basicConfig(level=logging.DEBUG if os.environ.get("WINDOWWHEEL_DEBUG") else logging.INFO, format="%(asctime)s  %(levelname)-7s %(message)s", datefmt="%H:%M:%S")
     if not autostart.acquire_single_instance():
-        log.info("WindowWheel läuft bereits – beende diese zweite Instanz.")
+        log.info("WindowWheel is already running – exiting this second instance.")
         return
     appbundle.ensure_installed()
     app = NSApplication.sharedApplication()

@@ -16,7 +16,6 @@ from .wheel import KEY_ESC
 
 log = logging.getLogger(__name__)
 
-HINT = "Loslassen = einrasten     ⌥⇥ / esc  ohne Einrasten ablegen"
 
 
 def _distance(rect, point):
@@ -60,8 +59,11 @@ class SnapMode:
 
     # --- Zeichnen -----------------------------------------------------------
 
+    def _hint(self):
+        return f"{self.layout.name}     Release to snap     {self.controller.hotkey_label} / esc  drop normally"
+
     def _pill(self, view):
-        text = f"{self.layout.name}     {HINT}"
+        text = self._hint()
         w = d.text_width(text, 13) + 48
         vf, sf = self.screen.visibleFrame(), self.screen.frame()
         top = vf.origin.y - sf.origin.y + vf.size.height
@@ -80,7 +82,7 @@ class SnapMode:
             d.text(str(i + 1), r, size=min(96, r.size.height * 0.25), weight=d.BOLD,
                    color=d.white(0.9 if i == self.highlight else 0.35), align="center")
         pill = self._pill(view)
-        d.text(f"{self.layout.name}     {HINT}", pill, size=13, color=d.white(0.92), align="center")
+        d.text(self._hint(), pill, size=13, color=d.white(0.92), align="center")
 
     # --- Eingabe (Mausposition aus dem Event-Tap) ----------------------------
 

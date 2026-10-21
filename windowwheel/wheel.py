@@ -153,9 +153,9 @@ class WheelMode:
     def _draw_center(self, c, r_in):
         r = r_in - 8
         if self.highlight is None:
-            d.text("Layout wählen", NSMakeRect(c.x - r, c.y + 4, 2 * r, 24),
+            d.text("Choose a layout", NSMakeRect(c.x - r, c.y + 4, 2 * r, 24),
                    size=17, weight=d.BOLD, align="center")
-            d.text("Maus bewegen · ⇥ · 1–9", NSMakeRect(c.x - r, c.y - 22, 2 * r, 18),
+            d.text(f"Point · {self.controller.hotkey_label} · 1–9", NSMakeRect(c.x - r, c.y - 22, 2 * r, 18),
                    size=12, color=d.white(0.6), align="center")
             return
 
@@ -168,7 +168,7 @@ class WheelMode:
                          numbers=True, number_color=d.white(0.95))
         d.text(layout.name, NSMakeRect(c.x - r + 10, c.y - 28, 2 * r - 20, 22),
                size=16, weight=d.BOLD, align="center")
-        d.text(f"{len(layout.slots)} Fenster", NSMakeRect(c.x - r, c.y - 48, 2 * r, 16),
+        d.text(f"{len(layout.slots)} windows", NSMakeRect(c.x - r, c.y - 48, 2 * r, 16),
                size=12, color=d.white(0.6), align="center")
 
     # --- Eingabe ------------------------------------------------------------

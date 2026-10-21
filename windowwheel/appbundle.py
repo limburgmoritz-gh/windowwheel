@@ -78,6 +78,6 @@ def ensure_installed():
             shutil.copy(ICON, contents / "Resources" / "AppIcon.icns")
         os.utime(APP)  # Finder/Spotlight sollen das neue Icon übernehmen
         subprocess.run([LSREGISTER, "-f", str(APP)], capture_output=True)
-        log.info("Programm angelegt: %s (über Spotlight auffindbar)", APP)
+        log.info("Installed app: %s (available in Spotlight)", APP)
     except OSError as exc:
-        log.warning("WindowWheel.app konnte nicht angelegt werden: %s", exc)
+        log.warning("Could not create WindowWheel.app: %s", exc)

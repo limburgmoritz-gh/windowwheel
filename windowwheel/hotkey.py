@@ -2,7 +2,7 @@
 
 Der Tap kann Tastendrücke verschlucken (der Hotkey landet nicht in der
 aktiven App) und bemerkt das Loslassen der Modifier – das braucht das
-"gedrückt halten, zielen, loslassen"-Verhalten wie beim GTA-Rad.
+"gedrückt halten, zielen, loslassen"-Verhalten des Rads.
 """
 
 import logging
@@ -41,38 +41,63 @@ MOD_MASK = (
     | Q.kCGEventFlagMaskShift
 )
 
-# Linke/rechte Modifier: gerätespezifische Bits (NX_DEVICE*KEYMASK) in den Event-Flags.
-SIDED_MODIFIERS = {
-    "lctrl": (Q.kCGEventFlagMaskControl, 0x0001),
-    "rctrl": (Q.kCGEventFlagMaskControl, 0x2000),
-    "lshift": (Q.kCGEventFlagMaskShift, 0x0002),
-    "rshift": (Q.kCGEventFlagMaskShift, 0x0004),
-    "lcmd": (Q.kCGEventFlagMaskCommand, 0x0008),
-    "rcmd": (Q.kCGEventFlagMaskCommand, 0x0010),
-    "lalt": (Q.kCGEventFlagMaskAlternate, 0x0020),
-    "ralt": (Q.kCGEventFlagMaskAlternate, 0x0040),
-}
-for _side in ("l", "r"):
-    SIDED_MODIFIERS[_side + "opt"] = SIDED_MODIFIERS[_side + "option"] = SIDED_MODIFIERS[_side + "alt"]
+# Reihenfolge wie in macOS-Menüs: ⌃ ⌥ ⇧ ⌘
+MOD_SYMBOLS = (
+    ("ctrl", Q.kCGEventFlagMaskControl, "⌃"),
+    ("alt", Q.kCGEventFlagMaskAlternate, "⌥"),
+    ("shift", Q.kCGEventFlagMaskShift, "⇧"),
+    ("cmd", Q.kCGEventFlagMaskCommand, "⌘"),
+)
+KEY_SYMBOLS = {"tab": "⇥", "space": "Space", "return": "↩", "delete": "⌫", "escape": "⎋"}
+KEY_NAMES = {code: name for name, code in KEYCODES.items()}
 
 
 def parse_hotkey(text):
-    """'ralt+return' -> (keycode, modifier_flags, side_flags)."""
-    keycode, mods, sides = None, 0, 0
+    """'alt+tab' -> (keycode, modifier_flags). Tasten ohne Namen als 'keycode:NN'."""
+    keycode, mods = None, 0
     for part in text.lower().replace(" ", "").split("+"):
         if part in MODIFIERS:
             mods |= MODIFIERS[part]
-        elif part in SIDED_MODIFIERS:
-            mod, side = SIDED_MODIFIERS[part]
-            mods |= mod
-            sides |= side
         elif part in KEYCODES:
             keycode = KEYCODES[part]
+        elif part.startswith("keycode:") and part[8:].isdigit():
+            keycode = int(part[8:])
         else:
-            raise ValueError(f"Unbekannte Taste im Hotkey: {part!r}")
+            raise ValueError(f"Unknown key in shortcut: {part!r}")
     if keycode is None:
-        raise ValueError(f"Hotkey ohne Taste: {text!r}")
+        raise ValueError(f"Shortcut without a key: {text!r}")
     return keycode, mods
+
+
+def hotkey_string(keycode, mods):
+    """(keycode, flags) -> 'alt+tab' für config.json."""
+    parts = [name for name, flag, _ in MOD_SYMBOLS if mods & flag]
+    parts.append(KEY_NAMES.get(keycode, f"keycode:{keycode}"))
+    return "+".join(parts)
+
+
+def key_label(keycode):
+    """Beschriftung einer Taste in der aktuellen Tastaturbelegung (z.B. 'Y' auf deutschen Tastaturen)."""
+    name = KEY_NAMES.get(keycode)
+    if name in KEY_SYMBOLS:
+        return KEY_SYMBOLS[name]
+    if name and name.startswith("f") and name[1:].isdigit():
+        return name.upper()
+    event = Q.CGEventCreateKeyboardEvent(None, keycode, True)
+    Q.CGEventSetFlags(event, 0)
+    _, chars = Q.CGEventKeyboardGetUnicodeString(event, 4, None, None)
+    return chars.upper() if chars and chars.isprintable() else (name or f"#{keycode}").upper()
+
+
+def format_hotkey(text):
+    """'alt+tab' -> '⌥⇥' zur Anzeige."""
+    keycode, mods = parse_hotkey(text)
+    return "".join(sym for _, flag, sym in MOD_SYMBOLS if mods & flag) + key_label(keycode)
+
+
+def is_function_key(keycode):
+    name = KEY_NAMES.get(keycode, "")
+    return name.startswith("f") and name[1:].isdigit()
 
 
 class HotkeyTap:
@@ -96,6 +121,7 @@ class HotkeyTap:
         # Modifier, die vor dem System versteckt werden (beim Einrasten: ⌥, damit
         # die macOS-eigene ⌥-Kachelung nicht dazwischenfunkt).
         self.hide_mods = 0
+        self.recorder = None  # recorder(keycode, flags) – siehe Einstellungen
 
     def set_hotkey(self, hotkey):
         self.keycode, self.mods = parse_hotkey(hotkey)
@@ -161,6 +187,11 @@ class HotkeyTap:
             return event
 
         keycode = Q.CGEventGetIntegerValueField(event, Q.kCGKeyboardEventKeycode)
+        if self.recorder is not None:
+            # Einstellungen nehmen gerade eine neue Tastenkombination auf.
+            if etype == Q.kCGEventKeyDown and not Q.CGEventGetIntegerValueField(event, Q.kCGKeyboardEventAutorepeat):
+                self.recorder(keycode, flags)
+            return None
         if keycode == self.keycode and flags == self.mods:
             if etype == Q.kCGEventKeyDown:
                 self._mods_down = self.mods != 0

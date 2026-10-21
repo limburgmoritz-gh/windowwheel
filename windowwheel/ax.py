@@ -32,7 +32,7 @@ try:
     )
     objc.loadBundleFunctions(_hiservices, _fns, [("_AXUIElementGetWindow", b"i@o^I")])
 except Exception:  # pragma: no cover
-    log.warning("_AXUIElementGetWindow nicht verfügbar – Zuordnung über Position")
+    log.warning("_AXUIElementGetWindow unavailable – matching windows by position")
 _get_window_id = _fns.get("_AXUIElementGetWindow")
 
 _icon_cache = {}

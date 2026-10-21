@@ -50,14 +50,14 @@ def enable():
     }
     with open(PLIST, "wb") as fh:
         plistlib.dump(plist, fh)
-    log.info("Autostart eingerichtet: %s", PLIST)
+    log.info("Launch at login enabled: %s", PLIST)
 
 
 def disable():
     # Eine gerade laufende Instanz bleibt bis zum Beenden aktiv.
     if PLIST.exists():
         PLIST.unlink()
-    log.info("Autostart entfernt")
+    log.info("Launch at login disabled")
 
 
 def acquire_single_instance():
