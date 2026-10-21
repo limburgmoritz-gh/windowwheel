@@ -13,6 +13,8 @@ KEY_LEFT, KEY_RIGHT, KEY_DOWN, KEY_UP = 123, 124, 125, 126
 DIGITS = {18: 0, 19: 1, 20: 2, 21: 3, 23: 4, 22: 5, 26: 6, 28: 7, 25: 8}
 SHIFT = 1 << 17
 FADE_OUT = 0.25  # Sekunden, die ein verlassenes Segment nachleuchtet
+GLOW_ALPHA = 0.32  # Helligkeit des Lichtkegels direkt am Mauszeiger
+GLOW_RADIUS = 1.1  # Reichweite des Lichtkegels relativ zur Segmenttiefe
 
 
 class WheelMode:
@@ -58,6 +60,20 @@ class WheelMode:
             host.layer().addSublayer_(marker)
             self._markers.append(marker)
 
+        # Lichtkegel, der dem Mauszeiger folgt – zugeschnitten auf das aktive Segment.
+        glow = Q.CAGradientLayer.layer()
+        glow.setType_(Q.kCAGradientLayerRadial)
+        glow.setFrame_(Q.CGRectMake(center.x - r_out, center.y - r_out, 2 * r_out, 2 * r_out))
+        glow.setColors_([layers.white(GLOW_ALPHA), layers.white(0.0)])
+        glow.setOpacity_(0.0)
+        mask = Q.CAShapeLayer.layer()
+        mask.setPath_(path)
+        mask.setPosition_(Q.CGPointMake(r_out, r_out))
+        glow.setMask_(mask)
+        host.layer().addSublayer_(glow)
+        self._glow, self._glow_mask = glow, mask
+        self._glow_geometry = (center, r_out, r_in)
+
     def _marker_path(self, r_out, r_in):
         """Segmentform um den Ursprung, zeigt nach rechts (0°) – wird per Rotation ausgerichtet."""
         n = len(self.layouts)
@@ -71,6 +87,30 @@ class WheelMode:
         Q.CGPathAddArc(path, None, 0, 0, r_in + 4, half, -half, True)
         Q.CGPathCloseSubpath(path)
         return path
+
+    def _update_glow(self, point=None):
+        glow = getattr(self, "_glow", None)
+        if glow is None:
+            return
+        if self.highlight is None:
+            layers.no_actions(lambda: glow.setOpacity_(0.0))
+            return
+        center, r_out, r_in = self._glow_geometry
+        mid = math.radians(90.0 - self.highlight * self._segment())
+        if point is None:  # per Tastatur gewählt: Licht mittig in die Kachel
+            r_mid = (r_out + r_in) / 2
+            point = Q.CGPointMake(center.x + r_mid * math.cos(mid), center.y + r_mid * math.sin(mid))
+        size = 2 * r_out
+        sx, sy = (point.x - center.x + r_out) / size, (point.y - center.y + r_out) / size
+        radius = GLOW_RADIUS * (r_out - r_in) / size
+
+        def apply():
+            self._glow_mask.setValue_forKeyPath_(mid, "transform.rotation.z")
+            glow.setStartPoint_(Q.CGPointMake(sx, sy))
+            glow.setEndPoint_(Q.CGPointMake(sx + radius, sy + radius))
+            glow.setOpacity_(1.0)
+
+        layers.no_actions(apply)
 
     def _move_marker(self, previous):
         markers = getattr(self, "_markers", [])
@@ -207,11 +247,13 @@ class WheelMode:
         if idx != self.highlight:
             previous, self.highlight = self.highlight, idx
             self._move_marker(previous)
+            self._update_glow()
             view.setNeedsDisplay_(True)
 
     def mouse_moved(self, view, point):
         idx, _ = self._index_at(view, point)
         self._set_highlight(view, idx)
+        self._update_glow(point)  # Licht folgt dem Mauszeiger innerhalb der Kachel
 
     def mouse_down(self, view, point):
         idx, dist = self._index_at(view, point)
