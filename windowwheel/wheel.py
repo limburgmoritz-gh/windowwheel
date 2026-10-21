@@ -12,6 +12,7 @@ KEY_ESC, KEY_RETURN, KEY_ENTER, KEY_TAB = 53, 36, 76, 48
 KEY_LEFT, KEY_RIGHT, KEY_DOWN, KEY_UP = 123, 124, 125, 126
 DIGITS = {18: 0, 19: 1, 20: 2, 21: 3, 23: 4, 22: 5, 26: 6, 28: 7, 25: 8}
 SHIFT = 1 << 17
+FADE_OUT = 0.25  # Sekunden, die ein verlassenes Segment nachleuchtet
 
 
 class WheelMode:
@@ -39,19 +40,23 @@ class WheelMode:
             overlay.add_below_view(g)
         self._glass = [disk, hub]
 
-        # Markierung als eigene Ebene: gleitet per Feder-Animation von Segment zu Segment.
+        # Eine Markierung pro Segment: Die neue erscheint sofort, die verlassene blendet weich aus.
         host = layers.host_view(overlay.view.bounds())
         overlay.add_below_view(host)
         self._glass.append(host)
-        marker = Q.CAShapeLayer.layer()
-        marker.setPath_(self._marker_path(r_out, r_in))
-        marker.setFillColor_(layers.white(0.20))
-        marker.setStrokeColor_(layers.white(0.55))
-        marker.setLineWidth_(1.2)
-        marker.setPosition_(center)
-        marker.setOpacity_(0.0)
-        host.layer().addSublayer_(marker)
-        self._marker = marker
+        path = self._marker_path(r_out, r_in)
+        self._markers = []
+        for i in range(len(self.layouts)):
+            marker = Q.CAShapeLayer.layer()
+            marker.setPath_(path)
+            marker.setFillColor_(layers.white(0.20))
+            marker.setStrokeColor_(layers.white(0.55))
+            marker.setLineWidth_(1.2)
+            marker.setPosition_(center)
+            marker.setValue_forKeyPath_(math.radians(90.0 - i * self._segment()), "transform.rotation.z")
+            marker.setOpacity_(0.0)
+            host.layer().addSublayer_(marker)
+            self._markers.append(marker)
 
     def _marker_path(self, r_out, r_in):
         """Segmentform um den Ursprung, zeigt nach rechts (0°) – wird per Rotation ausgerichtet."""
@@ -67,28 +72,14 @@ class WheelMode:
         Q.CGPathCloseSubpath(path)
         return path
 
-    def _move_marker(self):
-        marker = getattr(self, "_marker", None)
-        if marker is None:
-            return
-        if self.highlight is None:
-            layers.fade(marker, 0.0, 0.15)
-            return
-        target = math.radians(90.0 - self.highlight * self._segment())
-        shown = marker.presentationLayer() or marker
-        if shown.opacity() < 0.05:
-            # Erstes Erscheinen: direkt an Ort und Stelle einblenden.
-            layers.no_actions(lambda: marker.setValue_forKeyPath_(target, "transform.rotation.z"))
-            layers.fade(marker, 1.0, 0.12)
-            return
-        current = shown.valueForKeyPath_("transform.rotation.z")
-        # Kürzester Weg (z.B. von Segment 8 zu 1 nicht einmal rückwärts herum).
-        delta = (target - current + math.pi) % (2 * math.pi) - math.pi
-        end = current + delta
-        layers.no_actions(lambda: marker.setValue_forKeyPath_(end, "transform.rotation.z"))
-        layers.spring(marker, "transform.rotation.z", current, end, damping=24, stiffness=320)
-        if marker.opacity() < 1.0:
-            layers.fade(marker, 1.0, 0.12)
+    def _move_marker(self, previous):
+        markers = getattr(self, "_markers", [])
+        if previous is not None and previous < len(markers):
+            layers.fade(markers[previous], 0.0, FADE_OUT)
+        if self.highlight is not None and self.highlight < len(markers):
+            marker = markers[self.highlight]
+            marker.removeAllAnimations()
+            layers.no_actions(lambda: marker.setOpacity_(1.0))
 
     def detach(self, overlay):
         glass, self._glass = self._glass, []
@@ -214,8 +205,8 @@ class WheelMode:
 
     def _set_highlight(self, view, idx):
         if idx != self.highlight:
-            self.highlight = idx
-            self._move_marker()
+            previous, self.highlight = self.highlight, idx
+            self._move_marker(previous)
             view.setNeedsDisplay_(True)
 
     def mouse_moved(self, view, point):
