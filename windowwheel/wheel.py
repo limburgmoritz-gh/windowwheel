@@ -2,6 +2,7 @@
 
 import math
 
+import Quartz as Q
 from AppKit import NSAnimationContext, NSBezierPath, NSMakePoint, NSMakeRect
 
 from . import drawing as d
@@ -37,6 +38,57 @@ class WheelMode:
         for g in (disk, hub):
             overlay.add_below_view(g)
         self._glass = [disk, hub]
+
+        # Markierung als eigene Ebene: gleitet per Feder-Animation von Segment zu Segment.
+        host = layers.host_view(overlay.view.bounds())
+        overlay.add_below_view(host)
+        self._glass.append(host)
+        marker = Q.CAShapeLayer.layer()
+        marker.setPath_(self._marker_path(r_out, r_in))
+        marker.setFillColor_(layers.white(0.20))
+        marker.setStrokeColor_(layers.white(0.55))
+        marker.setLineWidth_(1.2)
+        marker.setPosition_(center)
+        marker.setOpacity_(0.0)
+        host.layer().addSublayer_(marker)
+        self._marker = marker
+
+    def _marker_path(self, r_out, r_in):
+        """Segmentform um den Ursprung, zeigt nach rechts (0°) – wird per Rotation ausgerichtet."""
+        n = len(self.layouts)
+        seg = self._segment()
+        path = Q.CGPathCreateMutable()
+        if n == 1:
+            Q.CGPathAddEllipseInRect(path, None, Q.CGRectMake(-r_out + 6, -r_out + 6, 2 * r_out - 12, 2 * r_out - 12))
+            return path
+        half = math.radians(seg / 2 - min(2.0, seg * 0.03))
+        Q.CGPathAddArc(path, None, 0, 0, r_out - 6, -half, half, False)
+        Q.CGPathAddArc(path, None, 0, 0, r_in + 4, half, -half, True)
+        Q.CGPathCloseSubpath(path)
+        return path
+
+    def _move_marker(self):
+        marker = getattr(self, "_marker", None)
+        if marker is None:
+            return
+        if self.highlight is None:
+            layers.fade(marker, 0.0, 0.15)
+            return
+        target = math.radians(90.0 - self.highlight * self._segment())
+        shown = marker.presentationLayer() or marker
+        if shown.opacity() < 0.05:
+            # Erstes Erscheinen: direkt an Ort und Stelle einblenden.
+            layers.no_actions(lambda: marker.setValue_forKeyPath_(target, "transform.rotation.z"))
+            layers.fade(marker, 1.0, 0.12)
+            return
+        current = shown.valueForKeyPath_("transform.rotation.z")
+        # Kürzester Weg (z.B. von Segment 8 zu 1 nicht einmal rückwärts herum).
+        delta = (target - current + math.pi) % (2 * math.pi) - math.pi
+        end = current + delta
+        layers.no_actions(lambda: marker.setValue_forKeyPath_(end, "transform.rotation.z"))
+        layers.spring(marker, "transform.rotation.z", current, end, damping=24, stiffness=320)
+        if marker.opacity() < 1.0:
+            layers.fade(marker, 1.0, 0.12)
 
     def detach(self, overlay):
         glass, self._glass = self._glass, []
@@ -113,19 +165,6 @@ class WheelMode:
         for i, layout in enumerate(self.layouts):
             hl = i == self.highlight
             mid = 90.0 - i * seg
-            if hl:
-                inset = min(2.0, seg * 0.03)
-                if n == 1:
-                    path = NSBezierPath.bezierPathWithOvalInRect_(
-                        NSMakeRect(center.x - r_out + 6, center.y - r_out + 6, 2 * r_out - 12, 2 * r_out - 12))
-                else:
-                    path = self._wedge(center, r_out - 6, r_in + 4, mid - seg / 2 + inset, mid + seg / 2 - inset)
-                d.white(0.20).setFill()
-                path.fill()
-                d.white(0.55).setStroke()
-                path.setLineWidth_(1.2)
-                path.stroke()
-
             px = center.x + r_mid * math.cos(math.radians(mid))
             py = center.y + r_mid * math.sin(math.radians(mid))
             arc = math.radians(seg) * r_mid
@@ -176,6 +215,7 @@ class WheelMode:
     def _set_highlight(self, view, idx):
         if idx != self.highlight:
             self.highlight = idx
+            self._move_marker()
             view.setNeedsDisplay_(True)
 
     def mouse_moved(self, view, point):
@@ -195,8 +235,8 @@ class WheelMode:
 
     def cycle(self, step):
         n = len(self.layouts)
-        self.highlight = 0 if self.highlight is None and step > 0 else ((self.highlight or 0) + step) % n
-        self.controller.overlay.redraw()
+        idx = 0 if self.highlight is None and step > 0 else ((self.highlight or 0) + step) % n
+        self._set_highlight(self.controller.overlay.view, idx)
 
     def modifiers_released(self):
         # GTA-Verhalten: Halten, zielen, loslassen. Ohne Ziel bleibt das Rad offen.
