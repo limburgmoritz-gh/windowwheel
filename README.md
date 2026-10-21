@@ -120,6 +120,11 @@ du bei Bedarf löschen.
 
 ## Gut zu wissen
 
+- **Nach Python-Updates durch Homebrew** (`brew upgrade`) kann macOS die Berechtigungen für
+  „Python“ wieder entziehen, weil es eine neue Programmdatei ist. Dann den Eintrag „Python“ unter
+  Bedienungshilfen bzw. Bildschirmaufnahme mit „–“ entfernen, neu erlauben und
+  `brew services restart windowwheel` ausführen.
+
 - Getestet auf macOS 27 mit Apple Silicon. Ab macOS 14 sollte es laufen (statt Liquid Glass gibt es
   dort klassisches Milchglas), das ist aber nicht getestet.
 - Fenster auf anderen Schreibtischen (Spaces) und im Vollbildmodus kann macOS nicht verschieben –
