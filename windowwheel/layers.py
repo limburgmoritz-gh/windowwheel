@@ -100,6 +100,16 @@ def scale(layer, factor):
     Q.CATransaction.commit()
 
 
+def glass_shape(rect, path, tint=None):
+    """Glasfläche in beliebiger Form: Glas über rect, zugeschnitten auf path (Koordinaten in rect)."""
+    view = glass(rect, 0, tint)
+    view.setWantsLayer_(True)
+    mask = Q.CAShapeLayer.layer()
+    mask.setPath_(path)
+    view.layer().setMask_(mask)
+    return view
+
+
 def glass(rect, radius, tint=None):
     """Liquid-Glass-Fläche (macOS 26+), auf älteren Systemen klassisches Milchglas."""
     if NSGlassEffectView is None:

@@ -13,6 +13,10 @@ KEY_LEFT, KEY_RIGHT, KEY_DOWN, KEY_UP = 123, 124, 125, 126
 DIGITS = {18: 0, 19: 1, 20: 2, 21: 3, 23: 4, 22: 5, 26: 6, 28: 7, 25: 8}
 SHIFT = 1 << 17
 FADE_OUT = 0.25  # Sekunden, die ein verlassenes Segment nachleuchtet
+GAP = 5.0  # halbe Fugenbreite zwischen den Glas-Segmenten (px)
+SEGMENT_TINT = 0.14  # Abdunklung der Glas-Segmente (0 = klares Glas)
+HUB_TINT = 0.45
+RIM_TOP, RIM_BOTTOM = 0.55, 0.06  # Helligkeit der Glaskante oben / unten
 GLOW_ALPHA = 0.32  # Helligkeit des Lichtkegels direkt am Mauszeiger
 GLOW_RADIUS = 1.1  # Reichweite des Lichtkegels relativ zur Segmenttiefe
 
@@ -33,19 +37,41 @@ class WheelMode:
 
     def attach(self, overlay):
         center, r_out, r_in = self._geometry(overlay.view)
-        disk = layers.glass(NSMakeRect(center.x - r_out, center.y - r_out, 2 * r_out, 2 * r_out), r_out,
-                            tint=d.rgba(0.05, 0.05, 0.08, 0.35))
+        # Jedes Segment ist eine eigene Liquid-Glass-Fläche, dazwischen schmale Fugen.
+        square = NSMakeRect(center.x - r_out, center.y - r_out, 2 * r_out, 2 * r_out)
+        self._glass = []
+        for i in range(len(self.layouts)):
+            path = self._segment_path(r_out, r_in, math.radians(90.0 - i * self._segment()), r_out, r_out)
+            self._glass.append(layers.glass_shape(square, path, tint=d.rgba(0.04, 0.05, 0.10, SEGMENT_TINT)))
         r = r_in - 8
-        hub = layers.glass(NSMakeRect(center.x - r, center.y - r, 2 * r, 2 * r), r,
-                           tint=d.rgba(0.02, 0.02, 0.04, 0.55))
-        for g in (disk, hub):
+        self._glass.append(layers.glass(NSMakeRect(center.x - r, center.y - r, 2 * r, 2 * r), r,
+                                        tint=d.rgba(0.02, 0.03, 0.06, HUB_TINT)))
+        for g in self._glass:
             overlay.add_below_view(g)
-        self._glass = [disk, hub]
 
         # Eine Markierung pro Segment: Die neue erscheint sofort, die verlassene blendet weich aus.
         host = layers.host_view(overlay.view.bounds())
         overlay.add_below_view(host)
         self._glass.append(host)
+        # Lichtkante wie bei Liquid Glass: feiner Rand, oben heller als unten.
+        outlines = Q.CGPathCreateMutable()
+        for i in range(len(self.layouts)):
+            Q.CGPathAddPath(outlines, None, self._segment_path(r_out, r_in, math.radians(90.0 - i * self._segment()), r_out, r_out))
+        hub_r = r_in - 8
+        Q.CGPathAddEllipseInRect(outlines, None, Q.CGRectMake(r_out - hub_r, r_out - hub_r, 2 * hub_r, 2 * hub_r))
+        rim = Q.CAGradientLayer.layer()
+        rim.setFrame_(Q.CGRectMake(center.x - r_out, center.y - r_out, 2 * r_out, 2 * r_out))
+        rim.setColors_([layers.white(RIM_TOP), layers.white(RIM_BOTTOM)])
+        rim.setStartPoint_(Q.CGPointMake(0.5, 1.0))
+        rim.setEndPoint_(Q.CGPointMake(0.5, 0.0))
+        rim_mask = Q.CAShapeLayer.layer()
+        rim_mask.setPath_(outlines)
+        rim_mask.setFillColor_(None)
+        rim_mask.setStrokeColor_(layers.white(1.0))
+        rim_mask.setLineWidth_(1.5)
+        rim.setMask_(rim_mask)
+        host.layer().addSublayer_(rim)
+
         path = self._marker_path(r_out, r_in)
         self._markers = []
         for i in range(len(self.layouts)):
@@ -74,19 +100,22 @@ class WheelMode:
         self._glow, self._glow_mask = glow, mask
         self._glow_geometry = (center, r_out, r_in)
 
-    def _marker_path(self, r_out, r_in):
-        """Segmentform um den Ursprung, zeigt nach rechts (0°) – wird per Rotation ausgerichtet."""
-        n = len(self.layouts)
-        seg = self._segment()
+    def _segment_path(self, r_out, r_in, angle, cx=0.0, cy=0.0):
+        """Segmentform mit Fugen, um (cx, cy) gedreht auf angle (Bogenmaß)."""
         path = Q.CGPathCreateMutable()
-        if n == 1:
-            Q.CGPathAddEllipseInRect(path, None, Q.CGRectMake(-r_out + 6, -r_out + 6, 2 * r_out - 12, 2 * r_out - 12))
+        if len(self.layouts) == 1:
+            Q.CGPathAddEllipseInRect(path, None, Q.CGRectMake(cx - r_out, cy - r_out, 2 * r_out, 2 * r_out))
+            Q.CGPathAddEllipseInRect(path, None, Q.CGRectMake(cx - r_in, cy - r_in, 2 * r_in, 2 * r_in))
             return path
-        half = math.radians(seg / 2 - min(2.0, seg * 0.03))
-        Q.CGPathAddArc(path, None, 0, 0, r_out - 6, -half, half, False)
-        Q.CGPathAddArc(path, None, 0, 0, r_in + 4, half, -half, True)
+        half = math.radians(self._segment() / 2) - GAP / ((r_out + r_in) / 2)
+        Q.CGPathAddArc(path, None, cx, cy, r_out, angle - half, angle + half, False)
+        Q.CGPathAddArc(path, None, cx, cy, r_in, angle + half, angle - half, True)
         Q.CGPathCloseSubpath(path)
         return path
+
+    def _marker_path(self, r_out, r_in):
+        """Markierung in derselben Form wie das Glas-Segment, zeigt nach rechts (0°)."""
+        return self._segment_path(r_out, r_in, 0.0)
 
     def _update_glow(self, point=None):
         glow = getattr(self, "_glow", None)
@@ -177,21 +206,9 @@ class WheelMode:
         NSBezierPath.fillRect_(view.bounds())
 
         center, r_out, r_in = self._geometry(view)
-        n = len(self.layouts)
         seg = self._segment()
         band = r_out - r_in
         r_mid = (r_out + r_in) / 2
-
-        # Trennlinien zwischen den Segmenten
-        if n > 1:
-            for i in range(n):
-                a = math.radians(90.0 - i * seg + seg / 2)
-                line = NSBezierPath.bezierPath()
-                line.moveToPoint_(NSMakePoint(center.x + (r_in + 6) * math.cos(a), center.y + (r_in + 6) * math.sin(a)))
-                line.lineToPoint_(NSMakePoint(center.x + (r_out - 10) * math.cos(a), center.y + (r_out - 10) * math.sin(a)))
-                line.setLineWidth_(1.0)
-                d.white(0.14).setStroke()
-                line.stroke()
 
         for i, layout in enumerate(self.layouts):
             hl = i == self.highlight
