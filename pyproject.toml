@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "windowwheel"
 dynamic = ["version"]
-description = "Fenster-Layouts per Radmenü für macOS – wie das Waffenrad in GTA"
+description = "Arrange macOS windows into predefined layouts with a radial menu"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]

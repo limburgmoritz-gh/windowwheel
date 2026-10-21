@@ -1,148 +1,136 @@
-<p align="center"><img src="docs/icon.png" width="160" alt="WindowWheel-Icon"></p>
+<p align="center"><img src="docs/icon.png" width="160" alt="WindowWheel icon"></p>
 
 <h1 align="center">WindowWheel</h1>
 
-<p align="center"><b>Fenster-Layouts per Radmenü für macOS – wie das Waffenrad in GTA.</b></p>
+<p align="center"><b>Arrange your windows into predefined layouts in seconds – with a radial menu for macOS.</b></p>
 
-> **Hinweis:** Dieses Programm ist in enger Zusammenarbeit mit LLMs (KI-Sprachmodellen) entstanden.
-> Ohne diese Zusammenarbeit wäre es in dieser Form nicht möglich gewesen.
+> **Note:** WindowWheel was built in close collaboration with large language models (LLMs).
+> Without that collaboration, this project would not have been possible in its current form.
 
-## Warum ich das gebaut habe
+## Why
 
-Auf meinem großen Bildschirm habe ich oft drei oder vier Fenster nebeneinander offen – fast immer
-in ähnlicher Anordnung und Größe. Mission Control ist super, um Fenster zu finden, hilft aber nicht
-dabei, sie anzuordnen. Jedes Mal alle Fenster von Hand so hinzuziehen, dass es sauber und
-symmetrisch aussieht, dauert lange und nervt.
+macOS makes it easy to find windows, but not to arrange them. If you regularly work with the same
+setup of several windows side by side, you end up dragging and resizing them by hand every time –
+and they rarely line up cleanly.
 
-Also wollte ich etwas wie das Waffenrad aus GTA: Tastenkombination drücken, die gewünschte
-Anordnung im Rad auswählen und dann einfach anklicken, welches Fenster wohin kommt. Fertig.
+WindowWheel turns this into a two-step action: pick a layout from a radial menu, then click the
+windows that belong in each slot. Typical situations where this helps:
 
-## Was es kann
+- **Development:** editor, terminal and browser preview side by side.
+- **Research and writing:** source material on one side, your document on the other.
+- **Meetings and calls:** video call, notes and shared document in a fixed arrangement.
+- **Monitoring:** several dashboards, logs or streams visible at the same time.
+- **Switching contexts:** quickly rebuilding the same arrangement after moving between
+  a laptop screen and an external display.
 
-- **Radmenü per ⌥⇥** – Layout auswählen wie im Spiel: halten, mit der Maus zielen, loslassen.
-- **Fenster per Klick zuordnen** – eine Mission-Control-artige Ansicht zeigt alle Fenster als
-  **Live-Vorschau** (Videos laufen weiter); ein Klick setzt das Fenster in den nächsten Platz.
-- **Pixelgenau und symmetrisch** – Außenränder und Zwischenräume sind immer gleich groß.
-  Den Abstand stellst du per Mausziehen ein; er wird pro Layout gemerkt.
-- **Einrasten beim Ziehen** – ein Fenster ziehen und dabei ⌥⇥ drücken: Die Plätze des zuletzt
-  gewählten Layouts erscheinen, loslassen lässt das Fenster einrasten.
-- **Aufgeräumter Schreibtisch** – nicht gewählte Fenster verschwinden hinter den gewählten,
-  bleiben aber offen (auch in Mission Control und im App-Umschalter).
-- **Mehrere Bildschirme** – es zählt immer der Bildschirm, auf dem die Maus steht.
-- **Eigene Layouts** – Fenster einmal von Hand anordnen und als Layout speichern.
-- Flüssige Animationen und Liquid-Glass-Optik (macOS 26+).
+## Features
+
+- **Radial layout menu** – press `⌥ Tab`, point at a layout, release.
+- **Click-to-assign** – an overview shows all windows of the current screen as live previews;
+  one click places a window in the next slot.
+- **Precise, symmetric spacing** – outer margins and gaps are always equal. Adjust them by dragging;
+  the spacing is saved per layout and scales with the screen size.
+- **Snap while dragging** – press `⌥ Tab` while dragging a window to show the slots of the last
+  used layout, then drop the window into one.
+- **Tidy desktop** – windows you didn't pick are moved behind the arranged ones, not closed
+  or minimized, so they remain available in Mission Control and the app switcher.
+- **Multiple displays** – always works on the screen under the cursor.
+- **Custom layouts** – arrange windows by hand once and save the arrangement as a layout.
 
 ## Installation
 
-Voraussetzung ist [Homebrew](https://brew.sh). Dann im Terminal:
+Requires [Homebrew](https://brew.sh) and macOS 14 or later.
 
 ```zsh
 brew install limburgmoritz-gh/tap/windowwheel && brew services start windowwheel
 ```
 
-Damit ist WindowWheel installiert, läuft sofort und startet ab jetzt automatisch beim Anmelden.
-Oben in der Menüleiste erscheint ein ◎-Symbol.
+WindowWheel starts immediately and launches automatically at login. It lives in the menu bar (◎)
+and also adds **WindowWheel** to `~/Applications`, so you can find and start it via Spotlight
+(`⌘ Space`), Launchpad or Finder.
 
-Außerdem legt WindowWheel beim ersten Start das Programm **WindowWheel** in deinem
-Programme-Ordner (`~/Programme`) an. Du findest es damit wie jede andere App über
-**Spotlight (⌘ Leertaste → „WindowWheel“)**, im Launchpad oder im Finder und kannst es dort
-starten, falls du es einmal beendet hast.
+### Permissions
 
-### Berechtigungen (einmalig)
+On first launch macOS asks for two permissions under
+**System Settings › Privacy & Security**. The entry is listed as **“Python”**:
 
-macOS fragt beim ersten Start nach zwei Berechtigungen. Beide findest du unter
-**Systemeinstellungen › Datenschutz & Sicherheit**; der Eintrag heißt dort **„Python“**:
+1. **Accessibility** – required for the keyboard shortcut and for moving windows.
+2. **Screen & System Audio Recording** – required for the window previews. After granting it,
+   restart once: `brew services restart windowwheel`
 
-1. **Bedienungshilfen** – für die Tastenkombination und zum Verschieben der Fenster.
-   WindowWheel wartet, bis die Freigabe da ist, und ist dann sofort einsatzbereit.
-2. **Bildschirm- & Systemaudioaufnahme** – für die Vorschaubilder der Fenster. Wird erst beim
-   ersten Öffnen der Fensteransicht abgefragt. Danach einmal neu starten:
-   `brew services restart windowwheel`
+WindowWheel does not record or transmit anything; screen access is used only to display the
+previews locally.
 
-WindowWheel nimmt nichts auf und sendet nichts irgendwohin – die Aufnahme-Berechtigung dient nur
-den Vorschaubildern auf deinem eigenen Bildschirm.
+## Usage
 
-## Bedienung
+**Layout menu** – hold `⌥ Option` and press `Tab`:
 
-**Rad** – `⌥ Option` gedrückt halten und `⇥ Tab` drücken:
-
-| Aktion | Wirkung |
+| Action | Result |
 |---|---|
-| Maus in eine Richtung bewegen, dann ⌥ loslassen | Layout wählen (GTA-Stil) |
-| ⇥ erneut drücken (⌥ halten) | nächstes Layout, Loslassen wählt es |
-| Klick / `1`–`9` / ⏎ | Layout wählen |
-| `esc`, Rechtsklick, Klick weit außerhalb | abbrechen |
+| Move the mouse towards a layout, release `⌥` | Select layout |
+| Press `Tab` again while holding `⌥` | Next layout |
+| Click, `1`–`9` or `Return` | Select layout |
+| `Esc` or right-click | Cancel |
 
-Tippst du ⌥⇥ nur kurz an, ohne zu zielen, bleibt das Rad offen und du kannst in Ruhe klicken.
+**Assigning windows** – after choosing a layout, all windows of the screen appear as live
+previews, with a map of the layout at the top:
 
-**Fenster zuordnen** – nach der Layout-Wahl gleiten alle Fenster des Bildschirms als
-Live-Vorschau ins Raster, oben zeigt eine Karte das Layout mit dem aktiven Platz:
-
-| Aktion | Wirkung |
+| Action | Result |
 |---|---|
-| Klick auf ein Vorschaubild | Fenster kommt in den aktiven Platz |
-| Klick auf einen Platz in der Karte | diesen Platz (neu) belegen |
-| Ziehen auf freier Fläche → / ← | horizontalen Abstand größer / kleiner |
-| Ziehen auf freier Fläche ↑ / ↓ | vertikalen Abstand größer / kleiner |
-| Doppelklick auf freie Fläche | Abstand zurücksetzen |
-| `␣` / `⇥` | Platz überspringen |
-| `⌫` / Rechtsklick | letzten Schritt rückgängig machen |
-| `1`–`9` | bestimmten Platz (neu) belegen |
-| ⏎ | fertig, auch wenn noch Plätze frei sind |
-| `esc` | abbrechen – alle Fenster gehen an ihren alten Platz zurück |
+| Click a preview | Place the window in the active slot |
+| Click a slot in the map | Select (or reassign) that slot |
+| Drag on empty space → / ← | Increase / decrease horizontal spacing |
+| Drag on empty space ↑ / ↓ | Increase / decrease vertical spacing |
+| Double-click on empty space | Reset spacing |
+| `Space` | Skip slot |
+| `Delete` or right-click | Undo last step |
+| `Return` | Finish |
+| `Esc` | Cancel and restore all windows |
 
-**Einrasten ohne Rad** – ein Fenster ganz normal ziehen und dabei `⌥ ⇥` drücken: Die Plätze des
-Layouts, das du zuletzt im Rad für diesen Bildschirm gewählt hast, erscheinen. Das Feld unter dem
-Cursor leuchtet auf, Loslassen lässt das Fenster einrasten. `⌥ ⇥` nochmal oder `esc` blendet die
-Felder aus.
+**Snap while dragging** – drag a window by its title bar and press `⌥ Tab`. Release over a slot
+to snap the window into it; press `⌥ Tab` or `Esc` again to drop it normally.
 
-## Eigene Layouts und Einstellungen
+## Configuration
 
-- **Am einfachsten:** Fenster einmal von Hand anordnen und im ◎-Menü
-  *„Aktuelle Anordnung als Layout speichern …“* wählen. Die Kanten rasten dabei auf glatte
-  Anteile ein (1/2, 1/3, 1/4, …), damit alles symmetrisch wird.
-- **Von Hand:** ◎-Menü › *„Layouts bearbeiten“* öffnet die Datei
-  `~/Library/Application Support/WindowWheel/config.json`. Jeder Platz ist
-  `[x, y, breite, höhe]` als Anteil der nutzbaren Bildschirmfläche (0 bis 1, `y` von oben);
-  die Reihenfolge ist die Reihenfolge beim Zuordnen.
+Use **“Save current arrangement as layout…”** in the menu bar to turn your current window
+arrangement into a layout. Edges snap to clean fractions (½, ⅓, ¼, …).
 
-Weitere Einstellungen in derselben Datei:
+All settings live in `~/Library/Application Support/WindowWheel/config.json`
+(menu bar › *Edit layouts*). Each slot is `[x, y, width, height]` as a fraction of the usable
+screen area, with `y` measured from the top.
 
-| Einstellung | Bedeutung |
+| Key | Description |
 |---|---|
-| `hotkey` | Tastenkombination, z. B. `"alt+tab"` oder `"ctrl+alt+space"` |
-| `gap` | Standard-Abstand in Pixeln |
-| `center_cursor` | Maus beim Öffnen in die Radmitte setzen |
-| `hide_others` | nicht gewählte Fenster hinter die gewählten schieben |
+| `hotkey` | Keyboard shortcut, e.g. `"alt+tab"` or `"ctrl+alt+space"` |
+| `gap` | Default spacing in pixels |
+| `center_cursor` | Center the cursor when the menu opens |
+| `hide_others` | Move windows that were not picked behind the arranged ones |
 
-## Update und Deinstallation
+## Update and uninstall
 
 ```zsh
-brew upgrade windowwheel && brew services restart windowwheel   # Update
-brew services stop windowwheel && brew uninstall windowwheel    # Deinstallieren
-rm -rf ~/Applications/WindowWheel.app                           # Programm-Eintrag entfernen
+brew upgrade windowwheel && brew services restart windowwheel
 ```
 
-Deine Layouts bleiben in `~/Library/Application Support/WindowWheel` erhalten; den Ordner kannst
-du bei Bedarf löschen.
+```zsh
+brew services stop windowwheel && brew uninstall windowwheel
+rm -rf ~/Applications/WindowWheel.app ~/Library/Application\ Support/WindowWheel
+```
 
-## Gut zu wissen
+## Known limitations
 
-- **Nach Python-Updates durch Homebrew** (`brew upgrade`) kann macOS die Berechtigungen für
-  „Python“ wieder entziehen, weil es eine neue Programmdatei ist. Dann den Eintrag „Python“ unter
-  Bedienungshilfen bzw. Bildschirmaufnahme mit „–“ entfernen, neu erlauben und
-  `brew services restart windowwheel` ausführen.
+- The user interface is currently in German.
+- After Homebrew updates Python, macOS may revoke the permissions for “Python”. Remove the entry
+  in System Settings, grant it again and run `brew services restart windowwheel`.
+- Windows on other Spaces or in full-screen mode cannot be arranged.
+- Apps that resize in fixed steps (e.g. Terminal) are centered in their slot instead of
+  filling it exactly.
+- Some apps (e.g. browsers) pause rendering while their window is completely covered, so their
+  preview may not update.
+- Tested on macOS 27 (Apple Silicon). macOS 14–25 should work with a frosted-glass fallback
+  instead of Liquid Glass, but is untested.
 
-- Getestet auf macOS 27 mit Apple Silicon. Ab macOS 14 sollte es laufen (statt Liquid Glass gibt es
-  dort klassisches Milchglas), das ist aber nicht getestet.
-- Fenster auf anderen Schreibtischen (Spaces) und im Vollbildmodus kann macOS nicht verschieben –
-  sie tauchen in der Ansicht nicht auf.
-- Apps mit festem Größenraster (z. B. Terminal: ganze Zeilen/Spalten) können einen Platz nicht
-  pixelgenau füllen; sie werden so groß wie möglich und mittig eingesetzt.
-- Fenster, die auf dem Schreibtisch komplett hinter anderen liegen, pausieren in manchen Apps
-  (z. B. Browsern) ihr Bild – deren Vorschau steht dann still.
-
-## Aus dem Quellcode starten
+## Running from source
 
 ```zsh
 git clone https://github.com/limburgmoritz-gh/windowwheel.git && cd windowwheel
@@ -150,6 +138,6 @@ python3 -m venv .venv && .venv/bin/pip install -e .
 ./run.sh
 ```
 
-## Lizenz
+## License
 
 [MIT](LICENSE)
