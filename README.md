@@ -1,6 +1,8 @@
-# WindowWheel
+<p align="center"><img src="docs/icon.png" width="160" alt="WindowWheel-Icon"></p>
 
-**Fenster-Layouts per Radmenü für macOS – wie das Waffenrad in GTA.**
+<h1 align="center">WindowWheel</h1>
+
+<p align="center"><b>Fenster-Layouts per Radmenü für macOS – wie das Waffenrad in GTA.</b></p>
 
 > **Hinweis:** Dieses Programm ist in enger Zusammenarbeit mit LLMs (KI-Sprachmodellen) entstanden.
 > Ohne diese Zusammenarbeit wäre es in dieser Form nicht möglich gewesen.
@@ -40,6 +42,11 @@ brew install limburgmoritz-gh/tap/windowwheel && brew services start windowwheel
 
 Damit ist WindowWheel installiert, läuft sofort und startet ab jetzt automatisch beim Anmelden.
 Oben in der Menüleiste erscheint ein ◎-Symbol.
+
+Außerdem legt WindowWheel beim ersten Start das Programm **WindowWheel** in deinem
+Programme-Ordner (`~/Programme`) an. Du findest es damit wie jede andere App über
+**Spotlight (⌘ Leertaste → „WindowWheel“)**, im Launchpad oder im Finder und kannst es dort
+starten, falls du es einmal beendet hast.
 
 ### Berechtigungen (einmalig)
 
@@ -113,6 +120,7 @@ Weitere Einstellungen in derselben Datei:
 ```zsh
 brew upgrade windowwheel && brew services restart windowwheel   # Update
 brew services stop windowwheel && brew uninstall windowwheel    # Deinstallieren
+rm -rf ~/Applications/WindowWheel.app                           # Programm-Eintrag entfernen
 ```
 
 Deine Layouts bleiben in `~/Library/Application Support/WindowWheel` erhalten; den Ordner kannst

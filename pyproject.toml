@@ -30,5 +30,8 @@ windowwheel = "windowwheel.app:main"
 [tool.setuptools]
 packages = ["windowwheel"]
 
+[tool.setuptools.package-data]
+windowwheel = ["resources/*.icns"]
+
 [tool.setuptools.dynamic]
 version = { attr = "windowwheel.__version__" }

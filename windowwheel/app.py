@@ -25,7 +25,7 @@ from AppKit import (
 )
 from PyObjCTools import AppHelper
 
-from . import __version__, autostart, ax
+from . import __version__, appbundle, autostart, ax
 from . import config as cfg
 from .assign import AssignMode
 from .geometry import cocoa_to_cg_rect, gap_to_relative, intersection_area, screen_center_cg, screen_under_mouse
@@ -439,6 +439,7 @@ def main():
     if not autostart.acquire_single_instance():
         log.info("WindowWheel läuft bereits – beende diese zweite Instanz.")
         return
+    appbundle.ensure_installed()
     app = NSApplication.sharedApplication()
     app.setActivationPolicy_(NSApplicationActivationPolicyAccessory)
     delegate = AppDelegate.alloc().init()
